@@ -211,12 +211,11 @@ export default function BottomPanel() {
       {/* ── Route info card (appears when destination is active) ── */}
       {destination && (
         <div
-          className="mb-2 flex items-center justify-between gap-2"
+          className="mb-2 flex items-center justify-between gap-2 animate-fade-in-up p-3"
           style={{
-            background: 'rgba(10,132,255,0.1)',
-            border: '1px solid rgba(10,132,255,0.2)',
+            background: 'rgba(0, 122, 255, 0.08)',
             borderRadius: 16,
-            padding: '12px 16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.04), inset 0 0 0 1px rgba(0,122,255,0.12)',
           }}
         >
           <div className="min-w-0 flex-1">
@@ -244,8 +243,10 @@ export default function BottomPanel() {
             </button>
             <button
               onClick={clearDestination}
-              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.1)]"
-              style={{ color: 'var(--text-secondary)' }}
+              className="w-7 h-7 flex items-center justify-center rounded-full"
+              style={{ color: 'var(--text-tertiary)', transition: 'all 0.3s var(--transition-spring)' }}
+              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(60,60,67,0.08)'; }}
+              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
               title="取消导航"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -294,7 +295,7 @@ export default function BottomPanel() {
 
           {/* Creation flow */}
           {isCreating && (
-            <div className="p-3 rounded-2xl space-y-2" style={{ background: 'rgba(10,132,255,0.08)', border: '1px solid rgba(10,132,255,0.2)' }}>
+            <div className="p-3 rounded-2xl space-y-2 animate-scale-in" style={{ background: 'rgba(0,122,255,0.06)', boxShadow: '0 2px 12px rgba(0,0,0,0.04), inset 0 0 0 1px rgba(0,122,255,0.10)' }}>
               {createStep === 'adding_points' && (
                 <>
                   <div className="flex items-center gap-2">
@@ -311,7 +312,7 @@ export default function BottomPanel() {
                         useRouteStore.getState().addWaypoint(wlng, wlat);
                       }}
                       className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[12px] font-medium"
-                      style={{ background: 'rgba(10,132,255,0.12)', color: 'var(--accent)' }}
+                      style={{ background: 'rgba(0,122,255,0.08)', color: 'var(--accent)', transition: 'all 0.3s var(--transition-spring)' }}
                     >
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="7" cy="7" r="0.8" fill="currentColor"/><path d="M7 1v2.5M7 10.5V13M1 7h2.5M10.5 7H13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
                       使用当前位置添加航点
@@ -373,16 +374,20 @@ export default function BottomPanel() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); downloadRoute(route); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-full active:bg-[rgba(255,255,255,0.12)]"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full"
+                    style={{ color: 'var(--text-tertiary)', transition: 'all 0.3s var(--transition-spring)' }}
+                    onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(60,60,67,0.06)'; }}
+                    onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
                     title="导出JSON"
                   >
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v8M3 7l4 4 4-4M1 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); reverseRoute(route.id!); }}
-                    className="w-8 h-8 flex items-center justify-center rounded-full active:bg-[rgba(255,255,255,0.12)]"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full"
+                    style={{ color: 'var(--text-tertiary)', transition: 'all 0.3s var(--transition-spring)' }}
+                    onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(60,60,67,0.06)'; }}
+                    onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
                     title="反跑"
                   >
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2l4 4-4 4M13 6H1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -392,8 +397,10 @@ export default function BottomPanel() {
                       e.stopPropagation();
                       if (confirm(`删除"${route.name}"？`)) deleteRoute(route.id!);
                     }}
-                    className="w-8 h-8 flex items-center justify-center rounded-full active:bg-[rgba(255,69,58,0.18)]"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    className="w-8 h-8 flex items-center justify-center rounded-full"
+                    style={{ color: 'var(--text-tertiary)', transition: 'all 0.3s var(--transition-spring)' }}
+                    onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(255,59,48,0.1)'; }}
+                    onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
                     title="删除"
                   >
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -418,8 +425,9 @@ export default function BottomPanel() {
                     }}
                     className="h-8 px-2.5 flex items-center justify-center gap-1 rounded-full text-[11px] font-medium shrink-0"
                     style={{
-                      background: copiedId === route.id ? 'rgba(48,209,88,0.18)' : 'rgba(10,132,255,0.14)',
+                      background: copiedId === route.id ? 'rgba(52,199,89,0.14)' : 'rgba(0,122,255,0.10)',
                       color: copiedId === route.id ? 'var(--green)' : 'var(--accent)',
+                      transition: 'all 0.3s var(--transition-spring)',
                     }}
                     title="复制种子码"
                   >
@@ -457,8 +465,8 @@ export default function BottomPanel() {
               <div className="shrink-0 space-y-2">
                 {/* Route badge + weather */}
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full min-w-0" style={{ background: 'rgba(191,90,242,0.1)' }}>
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-purple)] shrink-0" />
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full min-w-0 animate-scale-in" style={{ background: 'rgba(175,82,222,0.08)', boxShadow: 'inset 0 0 0 1px rgba(175,82,222,0.12)' }}>
+                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: 'var(--accent-purple)' }} />
                     <span className="text-[12px] font-medium truncate" style={{ color: 'var(--accent-purple)' }}>
                       {activeRoute.name}
                     </span>
@@ -481,6 +489,7 @@ export default function BottomPanel() {
                       letterSpacing: '0.02em',
                       willChange: 'transform',
                       transform: 'translateZ(0)',
+                      transition: 'color 0.3s ease',
                     }}
                   >
                     {formatTime(elapsed)}
@@ -492,7 +501,7 @@ export default function BottomPanel() {
                         fontFamily: "'SF Mono', 'Menlo', 'Courier New', monospace",
                         fontSize: 'clamp(18px, 5vw, 28px)',
                         fontWeight: 600,
-                        color: deltaToPB <= 0 ? 'var(--green)' : 'var(--red, #FF453A)',
+                        color: deltaToPB <= 0 ? 'var(--green)' : 'var(--red)',
                       }}
                     >
                       {deltaToPB <= 0 ? '−' : '+'}{formatTimeShort(Math.abs(deltaToPB))}
@@ -523,20 +532,22 @@ export default function BottomPanel() {
                 {/* Auto mode toggle */}
                 <button
                   onClick={toggleAutoMode}
-                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all"
+                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[12px] font-medium"
                   style={{
-                    background: autoMode ? 'rgba(10,132,255,0.15)' : 'rgba(118,118,128,0.08)',
-                    border: autoMode ? '1px solid rgba(10,132,255,0.3)' : '1px solid transparent',
+                    background: autoMode ? 'rgba(0,122,255,0.10)' : 'rgba(118,118,128,0.06)',
+                    border: 'none',
+                    boxShadow: autoMode ? 'inset 0 0 0 1px rgba(0,122,255,0.20)' : 'none',
+                    transition: 'all 0.3s var(--transition-spring)',
                   }}
                 >
                   <span style={{ color: autoMode ? 'var(--accent)' : 'var(--text-secondary)' }}>⏱ 自动启停</span>
                   <div
-                    className="w-9 h-5 rounded-full transition-colors relative"
-                    style={{ background: autoMode ? 'var(--accent)' : 'rgba(118,118,128,0.4)' }}
+                    className="w-9 h-5 rounded-full relative"
+                    style={{ background: autoMode ? 'var(--accent)' : 'rgba(118,118,128,0.28)', transition: 'background 0.3s var(--transition-spring)' }}
                   >
                     <div
-                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
-                      style={{ left: autoMode ? 'calc(100% - 18px)' : '2px' }}
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all"
+                      style={{ left: autoMode ? 'calc(100% - 18px)' : '2px', transitionDuration: '0.3s', transitionTimingFunction: 'var(--transition-spring)' }}
                     />
                   </div>
                 </button>
@@ -582,7 +593,7 @@ export default function BottomPanel() {
                 {/* Controls */}
                 <div className="flex gap-2">
                   {status === 'idle' && lightPhase === 'idle' && (
-                    <button onClick={beginStartSequence} className="btn btn-primary flex-1" style={{ background: 'var(--green)', color: '#000' }}>
+                    <button onClick={beginStartSequence} className="btn flex-1" style={{ background: 'var(--green)', color: '#fff', borderRadius: '9999px', boxShadow: '0 2px 8px rgba(52,199,89,0.3)', transition: 'all 0.3s var(--transition-spring)' }}>
                       启表
                     </button>
                   )}
@@ -592,7 +603,7 @@ export default function BottomPanel() {
                       <button
                         onClick={() => { if (confirm('确定退出？计时不会被保存。')) reset(); }}
                         className="btn flex-1"
-                        style={{ color: 'var(--yellow)' }}
+                        style={{ background: 'rgba(255,149,0,0.12)', color: 'var(--yellow)', borderRadius: '9999px', transition: 'all 0.3s var(--transition-spring)' }}
                       >
                         退出
                       </button>
@@ -610,11 +621,11 @@ export default function BottomPanel() {
                       const pbSplit = pbRecord?.splits?.[i];
                       const diff = pbSplit != null ? t - pbSplit : null;
                       return (
-                        <div key={i} className="flex justify-between items-center px-3 py-2 rounded-lg text-[14px]" style={{ background: 'rgba(118,118,128,0.1)' }}>
+                        <div key={i} className="flex justify-between items-center px-3 py-2 rounded-lg text-[14px] animate-fade-in-up" style={{ background: 'rgba(118,118,128,0.06)', transition: 'background 0.3s var(--transition-smooth)' }}>
                           <span style={{ color: 'var(--text-tertiary)' }}>S{i + 1}</span>
                           <span className="font-mono font-medium" style={{ color: 'var(--text-primary)' }}>{formatTimeShort(t)}</span>
                           {diff !== null && (
-                            <span className="font-mono" style={{ color: diff <= 0 ? 'var(--green)' : 'var(--red, #FF453A)', fontSize: '12px' }}>
+                            <span className="font-mono" style={{ color: diff <= 0 ? 'var(--green)' : 'var(--red)', fontSize: '12px' }}>
                               {diff <= 0 ? '−' : '+'}{formatTimeShort(Math.abs(diff))}
                             </span>
                           )}
@@ -626,7 +637,7 @@ export default function BottomPanel() {
 
                 {/* Last result */}
                 {lastRecord && colorMeta && (
-                  <div className="p-3 rounded-2xl flex items-center gap-2.5" style={{ background: `${colorMeta.bg === 'bg-purple-500/20' ? 'rgba(191,90,242,0.12)' : colorMeta.bg === 'bg-green-500/20' ? 'rgba(48,209,88,0.12)' : 'rgba(255,214,10,0.12)'}` }}>
+                  <div className="p-3 rounded-2xl flex items-center gap-2.5 animate-fade-in-up" style={{ background: COLOR_MAP[lastRecordColor!]?.bg || 'rgba(118,118,128,0.06)', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)' }}>
                     <div className="text-xl">
                       {lastRecordColor === 'purple' ? '🟣' : lastRecordColor === 'green' ? '🟢' : '🟡'}
                     </div>
@@ -657,7 +668,7 @@ export default function BottomPanel() {
             <>
               {/* PB badge */}
               {pb !== null && (
-                <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(191,90,242,0.1)', border: '1px solid rgba(191,90,242,0.2)' }}>
+                <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl animate-fade-in-up" style={{ background: 'rgba(175,82,222,0.08)', boxShadow: 'inset 0 0 0 1px rgba(175,82,222,0.15)' }}>
                   <span className="text-[13px] font-semibold" style={{ color: 'var(--accent-purple)' }}>PB</span>
                   <span className="tabular-nums text-[15px] font-semibold ml-auto" style={{ color: 'var(--accent-purple)' }}>{formatTime(pb)}</span>
                 </div>
@@ -666,19 +677,19 @@ export default function BottomPanel() {
               {/* Session statistics */}
               {recordCount > 0 && (
                 <div className="grid grid-cols-2 gap-2 mb-2">
-                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                  <div style={{ background: 'rgba(118,118,128,0.06)', borderRadius: 12, padding: '10px 12px', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>🏁 圈数</div>
                     <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{recordCount}</div>
                   </div>
-                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                  <div style={{ background: 'rgba(118,118,128,0.06)', borderRadius: 12, padding: '10px 12px', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>⏱ 最快</div>
                     <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{pb !== null ? formatTimeShort(pb) : '—'}</div>
                   </div>
-                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                  <div style={{ background: 'rgba(118,118,128,0.06)', borderRadius: 12, padding: '10px 12px', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>📊 平均</div>
                     <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{formatTimeShort(recordAvg)}</div>
                   </div>
-                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                  <div style={{ background: 'rgba(118,118,128,0.06)', borderRadius: 12, padding: '10px 12px', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.03)' }}>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>📏 波动</div>
                     <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>±{(recordStdDev / 1000).toFixed(3)}s</div>
                   </div>
@@ -689,9 +700,9 @@ export default function BottomPanel() {
                 {records.map((record) => {
                   const color = getRecordColor(records, record);
                   const bgMap: Record<string, string> = {
-                    purple: 'rgba(191,90,242,0.08)',
-                    green: 'rgba(48,209,88,0.08)',
-                    yellow: 'rgba(255,214,10,0.08)',
+                    purple: 'rgba(175,82,222,0.06)',
+                    green: 'rgba(52,199,89,0.06)',
+                    yellow: 'rgba(255,149,0,0.06)',
                   };
                   const textMap: Record<string, string> = {
                     purple: 'var(--accent-purple)',
@@ -702,7 +713,7 @@ export default function BottomPanel() {
                     <div
                       key={record.id}
                       className="group flex items-center justify-between px-3 py-2 rounded-xl"
-                      style={{ background: color ? bgMap[color] : 'rgba(118,118,128,0.08)' }}
+                      style={{ background: color ? bgMap[color] : 'rgba(118,118,128,0.04)' }}
                     >
                       <div className="min-w-0">
                         <span className="tabular-nums text-[15px] font-medium" style={{ color: color ? textMap[color] : 'var(--text-primary)' }}>
@@ -722,7 +733,10 @@ export default function BottomPanel() {
                         </span>
                         <button
                           onClick={() => { if (confirm('删除这条记录？')) deleteRecord(record.id!); }}
-                          className="w-6 h-6 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 hover:bg-[rgba(255,69,58,0.15)] transition-all shrink-0"
+                          className="w-6 h-6 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                          style={{ transition: 'all 0.3s var(--transition-spring)' }}
+                          onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(255,59,48,0.1)'; }}
+                          onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
                           style={{ color: 'var(--text-tertiary)' }}
                         >
                           <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>

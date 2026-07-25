@@ -1,20 +1,49 @@
 @import "tailwindcss";
 
-/* ── Apple Design System + Performance ── */
+/* ── Apple Liquid Glass Design System (Light Theme) ── */
 :root {
-  --glass-bg: rgba(28, 28, 30, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --surface: #1C1C1E;
-  --surface-elevated: #2C2C2E;
-  --accent: #0A84FF;
-  --accent-purple: #BF5AF2;
-  --green: #30D158;
-  --yellow: #FFD60A;
-  --red: #FF453A;
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-tertiary: rgba(255, 255, 255, 0.38);
-  --separator: rgba(255, 255, 255, 0.1);
+  /* Backgrounds */
+  --bg-primary: #F2F2F7;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E5E5EA;
+  --bg-elevated: rgba(255, 255, 255, 0.72);
+
+  /* Liquid Glass — the core effect */
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-bg-hover: rgba(255, 255, 255, 0.40);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.50);
+  --glass-border-strong: rgba(255, 255, 255, 0.80);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.4), inset 0 2px 12px rgba(255, 255, 255, 0.3);
+  --glass-shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  --glass-shadow-xs: 0 1px 6px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+
+  /* Text */
+  --text-primary: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.80);
+  --text-tertiary: rgba(60, 60, 67, 0.50);
+  --text-inverse: #FFFFFF;
+  --text-quaternary: rgba(60, 60, 67, 0.30);
+
+  /* Accents (Apple system colors, light theme) */
+  --accent: #007AFF;
+  --accent-purple: #AF52DE;
+  --green: #34C759;
+  --yellow: #FF9500;
+  --red: #FF3B30;
+
+  /* Separator */
+  --separator: rgba(60, 60, 67, 0.15);
+  --separator-strong: rgba(60, 60, 67, 0.25);
+
+  /* Map marker */
+  --gps-pulse: rgba(0, 122, 255, 0.30);
+
+  /* Timing */
+  --transition-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Safe areas */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -39,7 +68,7 @@ html, body, #root {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
-  background: #000;
+  background: var(--bg-primary);
   color: var(--text-primary);
   overscroll-behavior: none;
   -webkit-user-select: none;
@@ -58,25 +87,73 @@ body {
   content-visibility: auto;
 }
 
-/* ── Glass panel ── */
+/* ── Liquid Glass Components ── */
+
+.liquid-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  border: none;
+  border-radius: 22px;
+  box-shadow: var(--glass-shadow);
+  transition: background 0.3s var(--transition-smooth), box-shadow 0.3s var(--transition-smooth), transform 0.4s var(--transition-spring);
+}
+
+.liquid-glass:hover {
+  background: var(--glass-bg-hover);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 2px 16px rgba(255, 255, 255, 0.4);
+}
+
+.liquid-glass-sm {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  border: none;
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow-sm);
+  transition: background 0.3s var(--transition-smooth), box-shadow 0.3s var(--transition-smooth);
+}
+
+.liquid-glass-xs {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow-xs);
+  transition: background 0.3s var(--transition-smooth), box-shadow 0.3s var(--transition-smooth);
+}
+
+/* Stronger glass for elevated surfaces */
+.liquid-glass-strong {
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(30px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(30px) saturate(180%) brightness(1.08);
+  border: none;
+  border-radius: 22px;
+  box-shadow: var(--glass-shadow);
+}
+
+/* Legacy glass classes — remapped to liquid glass */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  border: none;
 }
 
 .glass-strong {
-  background: rgba(28, 28, 30, 0.88);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(30px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(30px) saturate(180%) brightness(1.08);
   contain: layout style paint;
+  border: none;
 }
 
-/* ── Segmented control ── */
+/* ── Segmented control (iOS-style) ── */
 .segmented {
   display: inline-flex;
-  background: rgba(118, 118, 128, 0.24);
+  background: rgba(118, 118, 128, 0.16);
   border-radius: 8.93px;
   padding: 2px;
 }
@@ -91,21 +168,23 @@ body {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  transition: background 0.15s ease;
+  transition: background 0.3s var(--transition-spring), box-shadow 0.3s var(--transition-spring);
   white-space: nowrap;
   touch-action: manipulation;
 }
 
 .segmented button.active {
-  background: #636366;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 @media (min-width: 640px) {
   .segmented button { min-height: 32px; padding: 0 14px; font-size: 14px; }
 }
 
-/* ── Buttons ── */
+/* ── Buttons (Apple pill style) ── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -113,11 +192,11 @@ body {
   height: 44px;
   min-height: 44px;
   padding: 0 20px;
-  border-radius: 14px;
+  border-radius: 9999px;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  transition: transform 0.1s ease, background 0.15s ease;
+  transition: transform 0.3s var(--transition-spring), background 0.3s var(--transition-spring), box-shadow 0.3s var(--transition-spring);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -126,20 +205,50 @@ body {
   transform: translateZ(0);
 }
 
-.btn:active { transform: scale(0.96) translateZ(0); }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #1A90FF; }
-.btn-danger { background: rgba(255, 69, 58, 0.2); color: var(--red); }
-.btn-ghost { background: rgba(118, 118, 128, 0.2); color: var(--text-primary); }
-.btn-ghost:hover { background: rgba(118, 118, 128, 0.3); }
+.btn:active { transform: scale(0.97) translateZ(0); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.30);
+}
+.btn-primary:hover {
+  background: #1A8AFF;
+  transform: scale(1.03);
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.40);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-danger {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--red);
+}
+.btn-danger:hover {
+  background: rgba(255, 59, 48, 0.25);
+  transform: scale(1.03);
+}
+
+.btn-ghost {
+  background: rgba(120, 120, 128, 0.12);
+  color: var(--accent);
+}
+.btn-ghost:hover {
+  background: rgba(120, 120, 128, 0.20);
+  transform: scale(1.03);
+}
+.btn-ghost:active {
+  transform: scale(0.97);
+}
 
 .btn-sm {
   height: 32px; min-height: 32px; padding: 0 12px;
-  border-radius: 10px; font-size: 13px; font-weight: 500;
+  border-radius: 9999px; font-size: 13px; font-weight: 500;
 }
 
 @media (min-width: 640px) {
-  .btn { height: 50px; min-height: 50px; padding: 0 24px; font-size: 16px; border-radius: 16px; }
+  .btn { height: 50px; min-height: 50px; padding: 0 24px; font-size: 16px; border-radius: 9999px; }
   .btn-sm { height: 36px; min-height: 36px; padding: 0 14px; font-size: 14px; }
 }
 
@@ -152,11 +261,11 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.08);
+  border: none;
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow-sm);
   overflow: hidden;
   transform: translateZ(0);
 }
@@ -164,18 +273,19 @@ body {
 .map-ctl-btn {
   width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.75);
+  color: var(--text-secondary);
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background 0.2s var(--transition-smooth), color 0.2s var(--transition-smooth), transform 0.3s var(--transition-spring);
   -webkit-tap-highlight-color: transparent;
 }
-.map-ctl-btn:active { background: rgba(255,255,255,0.12); }
+.map-ctl-btn:active { background: rgba(60, 60, 67, 0.08); }
+.map-ctl-btn:hover { transform: scale(1.08); }
 .map-ctl-btn.active { color: var(--accent); }
 
 .map-ctl-divider {
   height: 0.5px;
-  background: rgba(255,255,255,0.12);
+  background: var(--separator);
   margin: 0 8px;
 }
 
@@ -184,47 +294,49 @@ body {
   top: calc(52px + env(safe-area-inset-top, 0px));
   right: calc(max(10px, env(safe-area-inset-right, 0px) + 4px) + 52px);
   z-index: 1001;
-  border-radius: 14px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(30px) saturate(180%) brightness(1.08);
+  -webkit-backdrop-filter: blur(30px) saturate(180%) brightness(1.08);
+  border-radius: 16px;
   padding: 4px;
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 150px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--glass-shadow);
 }
 
 .map-layer-item {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 13px;
   text-align: left;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s ease;
+  transition: background 0.2s var(--transition-smooth);
 }
-.map-layer-item:active { background: rgba(255,255,255,0.1); }
+.map-layer-item:active { background: rgba(60, 60, 67, 0.06); }
 
-/* ── Input ── */
+/* ── Input (Apple style, light theme) ── */
 .input-apple {
   width: 100%; height: 44px; padding: 0 16px;
-  background: rgba(118, 118, 128, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(118, 118, 128, 0.08);
+  border: 1px solid rgba(60, 60, 67, 0.10);
   border-radius: 12px; font-size: 15px;
   color: var(--text-primary); outline: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.2s var(--transition-smooth), border-color 0.2s var(--transition-smooth), box-shadow 0.2s var(--transition-smooth);
 }
 .input-apple::placeholder { color: var(--text-tertiary); }
 .input-apple:focus {
-  background: rgba(118, 118, 128, 0.2);
+  background: rgba(118, 118, 128, 0.14);
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18);
 }
 
-/* ── Leaflet performance ── */
+/* ── Leaflet performance + light map feel ── */
 .leaflet-container {
-  background: #000 !important;
+  background: #E8E8ED !important;
   font-family: inherit;
   -webkit-transform: translateZ(0);
   touch-action: none;
@@ -234,17 +346,26 @@ body {
 /* ── Scrollbar ── */
 .custom-scrollbar::-webkit-scrollbar { width: 3px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(60, 60, 67, 0.16); border-radius: 3px; }
 @media (pointer: coarse) { .custom-scrollbar::-webkit-scrollbar { width: 4px; } }
 
 /* ── Route list ── */
 .route-item {
-  transition: background 0.1s ease;
+  transition: background 0.2s var(--transition-smooth), transform 0.3s var(--transition-spring);
   cursor: pointer; min-height: 44px;
   touch-action: manipulation; contain: layout style;
 }
-.route-item:hover { background: rgba(118,118,128,0.12); }
-.route-item.active { background: rgba(10,132,255,0.15); border-color: rgba(10,132,255,0.4); }
+.route-item:hover {
+  background: rgba(60, 60, 67, 0.06);
+  transform: scale(1.01);
+}
+.route-item.active {
+  background: rgba(0, 122, 255, 0.10);
+  border-color: rgba(0, 122, 255, 0.30);
+}
+.route-item:active {
+  transform: scale(0.985);
+}
 
 /* ── Pulsing dot (GPU composited) ── */
 @keyframes location-pulse {
@@ -256,14 +377,46 @@ body {
   will-change: transform, opacity;
 }
 
-/* ── Search popup ── */
+/* ── Non-Linear Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes flashOut {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s var(--transition-spring) forwards;
+}
+.animate-scale-in {
+  animation: scaleIn 0.4s var(--transition-spring) forwards;
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.35s var(--transition-spring) forwards;
+}
+
+/* ── Search popup (Leaflet popup overrides) ── */
 .search-popup .leaflet-popup-content-wrapper {
   background: var(--glass-bg) !important;
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-radius: 12px !important; color: var(--text-primary) !important;
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.08) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.08) !important;
+  border-radius: 12px !important;
+  color: var(--text-primary) !important;
   font-size: 14px !important;
   font-family: -apple-system,BlinkMacSystemFont,sans-serif !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+  box-shadow: var(--glass-shadow) !important;
+  border: none !important;
 }
 .search-popup .leaflet-popup-tip { background: var(--glass-bg) !important; }
 .search-popup .leaflet-popup-close-button { display: none !important; }
@@ -277,7 +430,7 @@ body {
 .speed-gauge svg { transform: rotate(-90deg); }
 .speed-gauge-ring {
   fill: none;
-  stroke: rgba(255,255,255,0.08);
+  stroke: rgba(60, 60, 67, 0.12);
   stroke-width: 6;
 }
 .speed-gauge-fill {
@@ -307,9 +460,9 @@ body {
     border-radius: 20px !important;
   }
   /* Reduce glass blur on mobile for battery performance */
-  .glass, .glass-strong {
-    backdrop-filter: blur(12px) saturate(150%);
-    -webkit-backdrop-filter: blur(12px) saturate(150%);
+  .glass, .glass-strong, .liquid-glass, .liquid-glass-sm, .liquid-glass-xs, .liquid-glass-strong {
+    backdrop-filter: blur(12px) saturate(150%) brightness(1.06);
+    -webkit-backdrop-filter: blur(12px) saturate(150%) brightness(1.06);
   }
 }
 

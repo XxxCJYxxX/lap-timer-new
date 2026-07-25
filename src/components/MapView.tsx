@@ -48,8 +48,8 @@ const LOCATION_ICON = L.divIcon({
   className: 'location-pulse',
   html: `
     <div style="position:relative;width:24px;height:24px;">
-      <div class="location-dot-pulse" style="position:absolute;inset:-12px;border-radius:50%;background:rgba(10,132,255,0.2);"></div>
-      <div style="position:absolute;inset:0;border-radius:50%;background:#0A84FF;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>
+      <div class="location-dot-pulse" style="position:absolute;inset:-12px;border-radius:50%;background:rgba(0,122,255,0.2);"></div>
+      <div style="position:absolute;inset:0;border-radius:50%;background:#007AFF;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.15);"></div>
     </div>`,
   iconSize: [24, 24],
   iconAnchor: [12, 12],
@@ -60,7 +60,7 @@ const DEST_ICON = L.divIcon({
   html: `
     <div style="position:relative;">
       <svg width="28" height="36" viewBox="0 0 28 36" fill="none">
-        <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#FF453A"/>
+        <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#FF3B30"/>
         <circle cx="14" cy="14" r="5" fill="#fff" opacity="0.9"/>
       </svg>
     </div>`,
@@ -80,16 +80,16 @@ function buildRouteMenu(route: Route, map: L.Map): HTMLElement {
 
   const title = document.createElement('div');
   title.textContent = route.name;
-  title.style.cssText = 'font-size:12px;font-weight:600;color:rgba(255,255,255,0.45);padding:4px 10px 8px;border-bottom:0.5px solid rgba(255,255,255,0.08);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;';
+  title.style.cssText = 'font-size:12px;font-weight:600;color:rgba(60,60,67,0.5);padding:4px 10px 8px;border-bottom:0.5px solid rgba(60,60,67,0.1);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;';
   container.appendChild(title);
 
   const mkBtn = (label: string, onClick: (btn: HTMLButtonElement) => void) => {
     const b = document.createElement('button');
     b.textContent = label;
-    b.style.cssText = 'all:unset;cursor:pointer;padding:9px 10px;border-radius:8px;font-size:13px;color:rgba(255,255,255,0.92);display:block;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent;';
-    b.addEventListener('touchstart', () => { b.style.background = 'rgba(255,255,255,0.1)'; }, { passive: true });
+    b.style.cssText = 'all:unset;cursor:pointer;padding:9px 10px;border-radius:8px;font-size:13px;color:rgba(0,0,0,0.85);display:block;width:100%;box-sizing:border-box;-webkit-tap-highlight-color:transparent;';
+    b.addEventListener('touchstart', () => { b.style.background = 'rgba(60,60,67,0.06)'; }, { passive: true });
     b.addEventListener('touchend', () => { setTimeout(() => { b.style.background = 'transparent'; }, 150); }, { passive: true });
-    b.onmouseenter = () => { b.style.background = 'rgba(255,255,255,0.08)'; };
+    b.onmouseenter = () => { b.style.background = 'rgba(60,60,67,0.05)'; };
     b.onmouseleave = () => { b.style.background = 'transparent'; };
     b.onclick = () => onClick(b);
     container.appendChild(b);
@@ -107,8 +107,8 @@ function buildRouteMenu(route: Route, map: L.Map): HTMLElement {
       document.execCommand('copy'); document.body.removeChild(ta);
     }
     btn.textContent = '✓ 已复制';
-    btn.style.color = '#30D158';
-    setTimeout(() => { btn.textContent = '📋 复制种子'; btn.style.color = 'rgba(255,255,255,0.92)'; }, 1500);
+    btn.style.color = '#34C759';
+    setTimeout(() => { btn.textContent = '📋 复制种子'; btn.style.color = 'rgba(0,0,0,0.85)'; }, 1500);
   });
 
   mkBtn('↩ 反跑', () => {
@@ -224,7 +224,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
         L.marker([lat, lng], { icon, zIndexOffset: 900 - i }).addTo(group);
       });
       if (points.length >= 2) {
-        L.polyline(points, { color: '#BF5AF2', weight: 2.5, dashArray: '8 4', opacity: 0.8 }).addTo(group);
+        L.polyline(points, { color: '#AF52DE', weight: 2.5, dashArray: '8 4', opacity: 0.8 }).addTo(group);
       }
     } else if (activeRoute && activeRoute.waypoints.length > 0) {
       const allWps = activeRoute.waypoints;
@@ -244,7 +244,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
           .bindPopup(() => buildRouteMenu(activeRoute, map), { className: 'search-popup', closeButton: false, offset: [0, -8] });
       });
       if (points.length >= 2) {
-        L.polyline(points, { color: '#BF5AF2', weight: 2.5, opacity: 0.7 })
+        L.polyline(points, { color: '#AF52DE', weight: 2.5, opacity: 0.7 })
           .addTo(group)
           .bindPopup(() => buildRouteMenu(activeRoute, map), { className: 'search-popup', closeButton: false });
       }
@@ -288,7 +288,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
         return [dlat, dlng];
       });
       routePolylineRef.current = L.polyline(displayCoords, {
-        color: '#0A84FF',
+        color: '#007AFF',
         weight: 5,
         opacity: 0.8,
         dashArray: '10 6',
@@ -314,7 +314,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
             return [dlat, dlng];
           });
           routePolylineRef.current = L.polyline(displayCoords, {
-            color: '#0A84FF',
+            color: '#007AFF',
             weight: 5,
             opacity: 0.8,
             dashArray: '10 6',
@@ -442,7 +442,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
         if (accuracy > 0) {
           if (!accuracyCircleRef.current) {
             accuracyCircleRef.current = L.circle([lat, lng], {
-              radius: accuracy, color: '#0A84FF', fillColor: '#0A84FF', fillOpacity: 0.06, weight: 0.5, interactive: false,
+              radius: accuracy, color: '#007AFF', fillColor: '#007AFF', fillOpacity: 0.06, weight: 0.5, interactive: false,
             }).addTo(map);
           } else {
             accuracyCircleRef.current.setLatLng([lat, lng]);
@@ -605,7 +605,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
       html: `
         <div style="position:relative;">
           <svg width="28" height="36" viewBox="0 0 28 36" fill="none">
-            <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#FF453A"/>
+            <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#FF3B30"/>
             <circle cx="14" cy="14" r="5" fill="#fff" opacity="0.9"/>
           </svg>
           <span style="position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:#fff;">●</span>
@@ -704,7 +704,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
 
       {/* Location error toast */}
       {locationError && (
-        <div className="absolute z-[1000] px-4 py-3 rounded-2xl glass-strong text-[13px] text-[#FF453A] font-medium shadow-lg text-center max-w-sm mx-auto leading-relaxed" style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))', left: 16, right: 16 }}>
+        <div className="absolute z-[1000] px-4 py-3 rounded-2xl liquid-glass-strong text-[13px] font-medium shadow-lg text-center max-w-sm mx-auto leading-relaxed" style={{ top: 'calc(56px + env(safe-area-inset-top, 0px))', left: 16, right: 16, color: 'var(--red)' }}>
           {locationError}
         </div>
       )}

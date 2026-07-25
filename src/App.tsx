@@ -22,7 +22,7 @@ function App() {
   }, []);
 
   return (
-    <div className="h-full w-full overflow-hidden bg-black">
+    <div className="h-full w-full overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
       {/* Map - full screen */}
       <main className="absolute inset-0">
         <MapView flyTo={flyTo} onFlyComplete={handleFlyComplete} />
@@ -32,10 +32,11 @@ function App() {
       <header
         className="absolute top-0 left-0 right-0 z-[900] flex items-center gap-3 px-4 select-none header-safe"
         style={{
-          background: 'rgba(28, 28, 30, 0.72)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(255, 255, 255, 0.25)',
+          backdropFilter: 'blur(20px) saturate(180%) brightness(1.08)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%) brightness(1.08)',
+          borderBottom: '1px solid rgba(60,60,67,0.08)',
+          boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
           height: '44px',
         }}
       >
@@ -43,7 +44,7 @@ function App() {
         <div className="flex items-center gap-2 shrink-0">
           <div
             className="w-6 h-6 rounded-md flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #BF5AF2, #0A84FF)' }}
+            style={{ background: 'linear-gradient(135deg, #AF52DE, #007AFF)' }}
           >
             <span className="text-[11px] font-black text-white">LT</span>
           </div>
@@ -66,11 +67,10 @@ function App() {
       <div
         className="absolute z-[900] rounded-3xl overflow-hidden bottom-panel"
         style={{
-          background: 'rgba(28, 28, 30, 0.82)',
-          backdropFilter: 'blur(30px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.05) inset',
+          background: 'rgba(255, 255, 255, 0.25)',
+          backdropFilter: 'blur(30px) saturate(180%) brightness(1.08)',
+          WebkitBackdropFilter: 'blur(30px) saturate(180%) brightness(1.08)',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.10), inset 0 0 0 1px rgba(255,255,255,0.4), inset 0 2px 12px rgba(255,255,255,0.3)',
           left: 'max(12px, env(safe-area-inset-left, 0px) + 4px)',
           right: 'max(12px, env(safe-area-inset-right, 0px) + 4px)',
         }}

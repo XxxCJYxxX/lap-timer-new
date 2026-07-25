@@ -114,12 +114,15 @@ export default function SearchBar({ onSelect }: Props) {
         className="flex items-center h-8 rounded-full overflow-hidden transition-all"
         style={{
           background: focused
-            ? 'rgba(118,118,128,0.2)'
-            : 'rgba(118,118,128,0.12)',
+            ? 'rgba(255,255,255,0.6)'
+            : 'rgba(118,118,128,0.08)',
+          backdropFilter: 'blur(12px) saturate(180%) brightness(1.08)',
+          WebkitBackdropFilter: 'blur(12px) saturate(180%) brightness(1.08)',
           border: focused
             ? '1px solid var(--accent)'
-            : '1px solid transparent',
-          boxShadow: focused ? '0 0 0 3px rgba(10,132,255,0.15)' : 'none',
+            : '1px solid rgba(60,60,67,0.10)',
+          boxShadow: focused ? '0 0 0 3px rgba(0,122,255,0.18)' : '0 1px 4px rgba(0,0,0,0.04)',
+          transition: 'all 0.3s var(--transition-spring)',
         }}
       >
         {/* Magnifying glass */}
@@ -134,12 +137,12 @@ export default function SearchBar({ onSelect }: Props) {
             cx="6.5"
             cy="6.5"
             r="4.5"
-            stroke={focused ? 'var(--accent)' : 'rgba(255,255,255,0.3)'}
+            stroke={focused ? 'var(--accent)' : 'rgba(60,60,67,0.35)'}
             strokeWidth="1.5"
           />
           <path
             d="M10 10l3.5 3.5"
-            stroke={focused ? 'var(--accent)' : 'rgba(255,255,255,0.3)'}
+            stroke={focused ? 'var(--accent)' : 'rgba(60,60,67,0.35)'}
             strokeWidth="1.5"
             strokeLinecap="round"
           />
@@ -159,16 +162,19 @@ export default function SearchBar({ onSelect }: Props) {
 
         {/* Loading spinner or clear button */}
         {loading && (
-          <div className="w-4 h-4 mr-2.5 shrink-0 animate-spin rounded-full border-2 border-[rgba(255,255,255,0.2)] border-t-[var(--accent)]" />
+          <div className="w-4 h-4 mr-2.5 shrink-0 animate-spin rounded-full border-2 border-[rgba(60,60,67,0.12)] border-t-[var(--accent)]" />
         )}
         {!loading && query && (
           <button
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => { setQuery(''); setResults([]); setOpen(false); inputRef.current?.focus(); }}
-            className="mr-1 w-6 h-6 flex items-center justify-center shrink-0 rounded-full hover:bg-[rgba(255,255,255,0.1)]"
+            className="mr-1 w-6 h-6 flex items-center justify-center shrink-0 rounded-full transition-all"
+            style={{ transition: 'all 0.3s var(--transition-spring)' }}
+            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = 'rgba(60,60,67,0.08)'; }}
+            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = 'transparent'; }}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 2l8 8M10 2l-8 8" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M2 2l8 8M10 2l-8 8" stroke="rgba(60,60,67,0.3)" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
         )}
@@ -177,13 +183,12 @@ export default function SearchBar({ onSelect }: Props) {
       {/* Results dropdown */}
       {open && results.length > 0 && (
         <div
-          className="absolute top-full mt-2 left-0 right-0 rounded-2xl overflow-hidden z-[1001]"
+          className="absolute top-full mt-2 left-0 right-0 rounded-2xl overflow-hidden z-[1001] animate-fade-in-up"
           style={{
-            background: 'rgba(44,44,46,0.95)',
-            backdropFilter: 'blur(30px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            background: 'rgba(255,255,255,0.72)',
+            backdropFilter: 'blur(30px) saturate(180%) brightness(1.08)',
+            WebkitBackdropFilter: 'blur(30px) saturate(180%) brightness(1.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(255,255,255,0.4)',
           }}
         >
           {results.map((result, i) => (
@@ -191,16 +196,19 @@ export default function SearchBar({ onSelect }: Props) {
               key={`${result.lat}-${result.lon}`}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => selectItem(result)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[rgba(255,255,255,0.06)]"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-left"
               style={{
-                background: i === selectedIdx ? 'rgba(10,132,255,0.12)' : 'transparent',
-                borderBottom: i < results.length - 1 ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
+                background: i === selectedIdx ? 'rgba(0,122,255,0.08)' : 'transparent',
+                borderBottom: i < results.length - 1 ? '0.5px solid rgba(60,60,67,0.08)' : 'none',
+                transition: 'background 0.2s var(--transition-smooth)',
               }}
+              onMouseEnter={(e) => { if (i !== selectedIdx) { (e.target as HTMLElement).style.background = 'rgba(60,60,67,0.04)'; } }}
+              onMouseLeave={(e) => { if (i !== selectedIdx) { (e.target as HTMLElement).style.background = 'transparent'; } }}
             >
               {/* Pin icon */}
               <svg className="shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="6" r="3" fill="rgba(10,132,255,0.3)" stroke="var(--accent)" strokeWidth="1.2" />
-                <path d="M8 16c-3-3.5-5.5-6.5-5.5-9.5a5.5 5.5 0 1111 0C13.5 9.5 11 12.5 8 16z" fill="var(--accent)" opacity="0.2" />
+                <circle cx="8" cy="6" r="3" fill="rgba(0,122,255,0.2)" stroke="var(--accent)" strokeWidth="1.2" />
+                <path d="M8 16c-3-3.5-5.5-6.5-5.5-9.5a5.5 5.5 0 1111 0C13.5 9.5 11 12.5 8 16z" fill="var(--accent)" opacity="0.15" />
               </svg>
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-medium truncate text-[var(--text-primary)]">
