@@ -3,6 +3,7 @@ import { useRouteStore } from '../stores/routeStore';
 import { useTimerStore } from '../stores/timerStore';
 import { useRecordsStore } from '../stores/recordStore';
 import { useLocationStore } from '../stores/locationStore';
+import { useNavStore } from '../stores/navStore';
 import { toStorageCoords } from '../utils/coord';
 import { COLOR_MAP } from '../utils/color';
 import { downloadRoute } from '../utils/routeIO';
@@ -17,7 +18,7 @@ function formatTime(ms: number): string {
   const hours = Math.floor(ms / 3600000);
   const mins = Math.floor((ms % 3600000) / 60000);
   const secs = Math.floor((ms % 60000) / 1000);
-  const millis = ms % 1000;
+  const millis = Math.floor(ms % 1000);
   const hh = String(hours).padStart(2, '0');
   const mm = String(mins).padStart(2, '0');
   const ss = String(secs).padStart(2, '0');
@@ -28,8 +29,21 @@ function formatTime(ms: number): string {
 function formatTimeShort(ms: number): string {
   const mins = Math.floor(ms / 60000);
   const secs = Math.floor((ms % 60000) / 1000);
-  const millis = ms % 1000;
+  const millis = Math.floor(ms % 1000);
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
+}
+
+function formatDistance(m: number): string {
+  if (m < 1000) return `${Math.round(m)} m`;
+  return `${(m / 1000).toFixed(1)} km`;
+}
+
+function formatDuration(s: number): string {
+  if (s < 60) return `${Math.round(s)}秒`;
+  if (s < 3600) return `${Math.round(s / 60)}分钟`;
+  const h = Math.floor(s / 3600);
+  const m = Math.round((s % 3600) / 60);
+  return `${h}小时${m}分钟`;
 }
 
 function getRecordColor(records: { timeMs: number; id?: number }[], record: { timeMs: number; id?: number }): RecordColor {
@@ -56,12 +70,14 @@ export default function BottomPanel() {
   } = useRouteStore();
 
   // Timer store
-  const { status, elapsed, lastRecord, lastRecordColor, autoMode, autoPhase, distanceToTarget, currentSpeed, maxSpeed, lightPhase, splits, weather, stop, tick, reset, toggleAutoMode, beginStartSequence, captureSplit } = useTimerStore();
+  const { status, elapsed, lastRecord, lastRecordColor, autoMode, autoPhase, distanceToTarget, currentSpeed, maxSpeed, lightPhase, splits, weather, tick, reset, toggleAutoMode, beginStartSequence, captureSplit } = useTimerStore();
   const { lat: gpsLat, lng: gpsLng } = useLocationStore();
+  const { destination, route, isLoading: navLoading, clearDestination } = useNavStore();
 
   // Records store
   const { records, loadRecords, deleteRecord } = useRecordsStore();
 
+  // F1 rule: exit without saving unless auto-stop fires at finish
   // Route creation state
   const [routeName, setRouteName] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -122,9 +138,54 @@ export default function BottomPanel() {
     setTab('timer');
   };
 
+  const handleStartNow = async () => {
+    const dest = useNavStore.getState().destination;
+    if (!dest) return;
+
+    // Convert WGS-84 → GCJ-02 to match existing DB format (addWaypoint also does this)
+    const [wp1lng, wp1lat] = toStorageCoords(dest.lng, dest.lat);
+    const [wp2lng, wp2lat] = toStorageCoords(dest.lng + 0.002, dest.lat);
+    const wp1 = { lat: wp1lat, lng: wp1lng };
+    const wp2 = { lat: wp2lat, lng: wp2lng };
+
+    const id = await db.routes.add({
+      name: dest.name,
+      waypoints: [wp1, wp2],
+      createdAt: Date.now(),
+    });
+
+    await useRouteStore.getState().loadRoutes();
+    useRouteStore.getState().setActiveRoute(id);
+    useNavStore.getState().clearDestination();
+    setTab('timer');
+  };
+
   const activeRoute = routes.find((r) => r.id === activeRouteId);
+
   const colorMeta = lastRecordColor ? COLOR_MAP[lastRecordColor] : null;
   const pb = records.length > 0 ? Math.min(...records.map((r) => r.timeMs)) : null;
+
+  // PB record (full object) for delta / sector comparison
+  const pbRecord = records.length > 0
+    ? records.reduce((best, r) => r.timeMs < best.timeMs ? r : best, records[0])
+    : null;
+
+  // Real-time delta to PB during timing
+  const deltaToPB = (() => {
+    if (status !== 'running' || !pbRecord || splits.length === 0) return null;
+    const currentSum = splits.reduce((a, b) => a + b, 0);
+    const pbSum = pbRecord.splits.slice(0, splits.length).reduce((a, b) => a + b, 0);
+    return currentSum - pbSum;
+  })();
+
+  // Stats for records tab
+  const recordCount = records.length;
+  const recordAvg = recordCount > 0
+    ? records.reduce((sum, r) => sum + r.timeMs, 0) / recordCount
+    : 0;
+  const recordStdDev = recordCount > 0
+    ? Math.sqrt(records.reduce((sum, r) => sum + Math.pow(r.timeMs - recordAvg, 2), 0) / recordCount)
+    : 0;
 
   return (
     <>
@@ -146,6 +207,54 @@ export default function BottomPanel() {
           ))}
         </div>
       </div>
+
+      {/* ── Route info card (appears when destination is active) ── */}
+      {destination && (
+        <div
+          className="mb-2 flex items-center justify-between gap-2"
+          style={{
+            background: 'rgba(10,132,255,0.1)',
+            border: '1px solid rgba(10,132,255,0.2)',
+            borderRadius: 16,
+            padding: '12px 16px',
+          }}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-medium text-[var(--text-primary)] flex items-center gap-1.5">
+              <span>🧭</span>
+              <span className="truncate">导航至 {destination.name}</span>
+            </div>
+            {navLoading ? (
+              <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">正在计算路线...</div>
+            ) : route ? (
+              <div className="text-[12px] text-[var(--text-secondary)] mt-0.5">
+                距离 {formatDistance(route.distance)} · 预计 {formatDuration(route.duration)}
+              </div>
+            ) : (
+              <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">路线计算失败</div>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleStartNow}
+              className="btn btn-sm btn-primary"
+              style={{ fontSize: 12, padding: '4px 12px' }}
+            >
+              立刻开始
+            </button>
+            <button
+              onClick={clearDestination}
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[rgba(255,255,255,0.1)]"
+              style={{ color: 'var(--text-secondary)' }}
+              title="取消导航"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Routes Tab ── */}
       {tab === 'routes' && (
@@ -336,186 +445,205 @@ export default function BottomPanel() {
 
       {/* ── Timer Tab ── */}
       {tab === 'timer' && (
-        <div className="space-y-2">
+        <>
           {!activeRoute ? (
             <div className="text-center py-8">
               <div className="text-[40px] mb-2">🏎️</div>
               <p className="text-[15px] text-[var(--text-secondary)]">请先在"路线"中选择或创建路线</p>
             </div>
           ) : (
-            <>
-              {/* Route badge + weather */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full min-w-0" style={{ background: 'rgba(191,90,242,0.1)' }}>
-                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-purple)] shrink-0" />
-                  <span className="text-[12px] font-medium truncate" style={{ color: 'var(--accent-purple)' }}>
-                    {activeRoute.name}
-                  </span>
+            <div className="flex flex-col max-h-[min(340px,38vh)] max-sm:max-h-[min(280px,34vh)]">
+              {/* ── Fixed Header (never scrolls) ── */}
+              <div className="shrink-0 space-y-2">
+                {/* Route badge + weather */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full min-w-0" style={{ background: 'rgba(191,90,242,0.1)' }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-purple)] shrink-0" />
+                    <span className="text-[12px] font-medium truncate" style={{ color: 'var(--accent-purple)' }}>
+                      {activeRoute.name}
+                    </span>
+                  </div>
+                  {weather && (
+                    <span className="text-[11px] shrink-0" style={{ color: 'var(--text-tertiary)' }}>
+                      {weather.weatherDesc} {weather.temp}° 💨{weather.windSpeed}
+                    </span>
+                  )}
                 </div>
-                {weather && (
-                  <span className="text-[11px] shrink-0" style={{ color: 'var(--text-tertiary)' }}>
-                    {weather.weatherDesc} {weather.temp}° 💨{weather.windSpeed}
-                  </span>
+
+                {/* Timer display */}
+                <div className="text-center">
+                  <div
+                    style={{
+                      fontFamily: "'SF Mono', 'Menlo', 'Courier New', monospace",
+                      fontSize: 'clamp(34px, 9vw, 52px)',
+                      lineHeight: 1.05,
+                      color: status === 'running' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      letterSpacing: '0.02em',
+                      willChange: 'transform',
+                      transform: 'translateZ(0)',
+                    }}
+                  >
+                    {formatTime(elapsed)}
+                  </div>
+                  {/* Real-time delta to PB */}
+                  {deltaToPB !== null && (
+                    <div
+                      style={{
+                        fontFamily: "'SF Mono', 'Menlo', 'Courier New', monospace",
+                        fontSize: 'clamp(18px, 5vw, 28px)',
+                        fontWeight: 600,
+                        color: deltaToPB <= 0 ? 'var(--green)' : 'var(--red, #FF453A)',
+                      }}
+                    >
+                      {deltaToPB <= 0 ? '−' : '+'}{formatTimeShort(Math.abs(deltaToPB))}
+                    </div>
+                  )}
+                  <div className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-widest">
+                    {status === 'idle' ? '就绪' : status === 'running' ? '计时中' : '已停止'}
+                  </div>
+                </div>
+
+                {/* Speed — inline compact bar */}
+                {status === 'running' && currentSpeed !== null && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 13 }}>
+                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                      {Math.round(currentSpeed)} <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>km/h</span>
+                    </span>
+                    {maxSpeed !== null && (
+                      <span style={{ color: 'var(--text-tertiary)' }}>
+                        最高 <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{Math.round(maxSpeed)}</span> km/h
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Timer display */}
-              <div className="text-center">
-                <div
+              {/* ── Scrollable Body ── */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 mt-2 space-y-2">
+                {/* Auto mode toggle */}
+                <button
+                  onClick={toggleAutoMode}
+                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all"
                   style={{
-                    fontFamily: "'SF Mono', 'Menlo', 'Courier New', monospace",
-                    fontSize: 'clamp(34px, 9vw, 52px)',
-                    lineHeight: 1.05,
-                    color: status === 'running' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    letterSpacing: '0.02em',
+                    background: autoMode ? 'rgba(10,132,255,0.15)' : 'rgba(118,118,128,0.08)',
+                    border: autoMode ? '1px solid rgba(10,132,255,0.3)' : '1px solid transparent',
                   }}
                 >
-                  {formatTime(elapsed)}
-                </div>
-                <div className="text-[10px] font-medium text-[var(--text-tertiary)] uppercase tracking-widest">
-                  {status === 'idle' ? '就绪' : status === 'running' ? '计时中' : '已停止'}
-                </div>
-              </div>
-
-              {/* Speed — compact */}
-              {status === 'running' && currentSpeed !== null && (
-                <div className="flex items-center justify-center gap-4">
-                  <div className="speed-gauge" style={{ width: 56, height: 56 }}>
-                    <svg viewBox="0 0 72 72" width="56" height="56">
-                      <circle className="speed-gauge-ring" cx="36" cy="36" r="30" />
-                      <circle
-                        className="speed-gauge-fill"
-                        cx="36" cy="36" r="30"
-                        strokeDasharray={`${Math.min(currentSpeed / 200 * 188.5, 188.5)} 188.5`}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="tabular-nums text-[16px] font-bold leading-none text-[var(--text-primary)]">
-                        {Math.round(currentSpeed)}
-                      </span>
-                      <span className="text-[8px] font-medium text-[var(--text-tertiary)] leading-tight">km/h</span>
-                    </div>
+                  <span style={{ color: autoMode ? 'var(--accent)' : 'var(--text-secondary)' }}>⏱ 自动启停</span>
+                  <div
+                    className="w-9 h-5 rounded-full transition-colors relative"
+                    style={{ background: autoMode ? 'var(--accent)' : 'rgba(118,118,128,0.4)' }}
+                  >
+                    <div
+                      className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                      style={{ left: autoMode ? 'calc(100% - 18px)' : '2px' }}
+                    />
                   </div>
-                  {maxSpeed !== null && (
-                    <div className="text-center">
-                      <div className="text-[9px] font-medium text-[var(--text-tertiary)] uppercase tracking-wider">最高</div>
-                      <div className="flex items-baseline justify-center gap-0.5" style={{ color: 'var(--accent)' }}>
-                        <span className="tabular-nums text-[18px] font-bold leading-none">{Math.round(maxSpeed)}</span>
-                        <span className="text-[10px] font-medium" style={{ color: 'var(--text-tertiary)' }}>km/h</span>
+                </button>
+
+                {/* Auto phase indicator */}
+                {autoMode && (
+                  <div className="flex items-center justify-center gap-1.5">
+                    {autoPhase === 'waiting_start' && (
+                      <span className="text-[11px] text-[var(--text-tertiary)]">
+                        📍 靠近发车点以自动启表
+                        {distanceToTarget !== null && (
+                          <span className="tabular-nums ml-1" style={{ color: distanceToTarget < 20 ? 'var(--green)' : 'var(--text-secondary)' }}>
+                            {Math.round(distanceToTarget)} m
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {autoPhase === 'leaving_start' && (
+                      <span className="text-[11px] text-[var(--text-tertiary)]">
+                        🚀 已发车，离开起点区域
+                        {distanceToTarget !== null && (
+                          <span className="tabular-nums ml-1" style={{ color: distanceToTarget > 50 ? 'var(--green)' : 'var(--yellow)' }}>
+                            {Math.round(distanceToTarget)} m
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {autoPhase === 'heading_to_finish' && (
+                      <span className="text-[11px] text-[var(--text-tertiary)]">
+                        🏁 距终点
+                        {distanceToTarget !== null && (
+                          <span className="tabular-nums ml-1" style={{ color: distanceToTarget < 20 ? 'var(--green)' : 'var(--text-secondary)' }}>
+                            {distanceToTarget < 1000
+                              ? `${Math.round(distanceToTarget)} m`
+                              : `${(distanceToTarget / 1000).toFixed(1)} km`}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Controls */}
+                <div className="flex gap-2">
+                  {status === 'idle' && lightPhase === 'idle' && (
+                    <button onClick={beginStartSequence} className="btn btn-primary flex-1" style={{ background: 'var(--green)', color: '#000' }}>
+                      启表
+                    </button>
+                  )}
+                  {status === 'running' && (
+                    <>
+                      <button onClick={captureSplit} className="btn btn-ghost flex-1">分段</button>
+                      <button
+                        onClick={() => { if (confirm('确定退出？计时不会被保存。')) reset(); }}
+                        className="btn flex-1"
+                        style={{ color: 'var(--yellow)' }}
+                      >
+                        退出
+                      </button>
+                    </>
+                  )}
+                  {status === 'stopped' && (
+                    <button onClick={reset} className="btn btn-ghost flex-1">重置</button>
+                  )}
+                </div>
+
+                {/* Live splits during run */}
+                {status === 'running' && splits.length > 0 && (
+                  <div className="space-y-1">
+                    {splits.map((t, i) => {
+                      const pbSplit = pbRecord?.splits?.[i];
+                      const diff = pbSplit != null ? t - pbSplit : null;
+                      return (
+                        <div key={i} className="flex justify-between items-center px-3 py-2 rounded-lg text-[14px]" style={{ background: 'rgba(118,118,128,0.1)' }}>
+                          <span style={{ color: 'var(--text-tertiary)' }}>S{i + 1}</span>
+                          <span className="font-mono font-medium" style={{ color: 'var(--text-primary)' }}>{formatTimeShort(t)}</span>
+                          {diff !== null && (
+                            <span className="font-mono" style={{ color: diff <= 0 ? 'var(--green)' : 'var(--red, #FF453A)', fontSize: '12px' }}>
+                              {diff <= 0 ? '−' : '+'}{formatTimeShort(Math.abs(diff))}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Last result */}
+                {lastRecord && colorMeta && (
+                  <div className="p-3 rounded-2xl flex items-center gap-2.5" style={{ background: `${colorMeta.bg === 'bg-purple-500/20' ? 'rgba(191,90,242,0.12)' : colorMeta.bg === 'bg-green-500/20' ? 'rgba(48,209,88,0.12)' : 'rgba(255,214,10,0.12)'}` }}>
+                    <div className="text-xl">
+                      {lastRecordColor === 'purple' ? '🟣' : lastRecordColor === 'green' ? '🟢' : '🟡'}
+                    </div>
+                    <div>
+                      <div className="text-[12px] font-semibold" style={{ color: `var(--${lastRecordColor === 'purple' ? 'accent-purple' : lastRecordColor === 'green' ? 'green' : 'yellow'})` }}>
+                        {colorMeta.label}
+                      </div>
+                      <div className="tabular-nums text-[18px] font-semibold text-[var(--text-primary)]">
+                        {formatTime(lastRecord.timeMs)}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Auto mode toggle */}
-              <button
-                onClick={toggleAutoMode}
-                className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all"
-                style={{
-                  background: autoMode ? 'rgba(10,132,255,0.15)' : 'rgba(118,118,128,0.08)',
-                  border: autoMode ? '1px solid rgba(10,132,255,0.3)' : '1px solid transparent',
-                }}
-              >
-                <span style={{ color: autoMode ? 'var(--accent)' : 'var(--text-secondary)' }}>⏱ 自动启停</span>
-                <div
-                  className="w-9 h-5 rounded-full transition-colors relative"
-                  style={{ background: autoMode ? 'var(--accent)' : 'rgba(118,118,128,0.4)' }}
-                >
-                  <div
-                    className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
-                    style={{ left: autoMode ? 'calc(100% - 18px)' : '2px' }}
-                  />
-                </div>
-              </button>
-
-              {/* Auto phase indicator */}
-              {autoMode && (
-                <div className="flex items-center justify-center gap-1.5">
-                  {autoPhase === 'waiting_start' && (
-                    <span className="text-[11px] text-[var(--text-tertiary)]">
-                      📍 靠近发车点以自动启表
-                      {distanceToTarget !== null && (
-                        <span className="tabular-nums ml-1" style={{ color: distanceToTarget < 20 ? 'var(--green)' : 'var(--text-secondary)' }}>
-                          {Math.round(distanceToTarget)} m
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {autoPhase === 'leaving_start' && (
-                    <span className="text-[11px] text-[var(--text-tertiary)]">
-                      🚀 已发车，离开起点区域
-                      {distanceToTarget !== null && (
-                        <span className="tabular-nums ml-1" style={{ color: distanceToTarget > 50 ? 'var(--green)' : 'var(--yellow)' }}>
-                          {Math.round(distanceToTarget)} m
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {autoPhase === 'heading_to_finish' && (
-                    <span className="text-[11px] text-[var(--text-tertiary)]">
-                      🏁 距终点
-                      {distanceToTarget !== null && (
-                        <span className="tabular-nums ml-1" style={{ color: distanceToTarget < 20 ? 'var(--green)' : 'var(--text-secondary)' }}>
-                          {distanceToTarget < 1000
-                            ? `${Math.round(distanceToTarget)} m`
-                            : `${(distanceToTarget / 1000).toFixed(1)} km`}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Controls */}
-              <div className="flex gap-2">
-                {status === 'idle' && lightPhase === 'idle' && (
-                  <button onClick={beginStartSequence} className="btn btn-primary flex-1" style={{ background: 'var(--green)', color: '#000' }}>
-                    启表
-                  </button>
-                )}
-                {status === 'running' && (
-                  <>
-                    <button onClick={captureSplit} className="btn btn-ghost flex-1">分段</button>
-                    <button onClick={() => stop()} className="btn btn-danger flex-1">停表</button>
-                  </>
-                )}
-                {status === 'stopped' && (
-                  <button onClick={reset} className="btn btn-ghost flex-1">重置</button>
+                  </div>
                 )}
               </div>
-
-              {/* Live splits during run */}
-              {status === 'running' && splits.length > 0 && (
-                <div className="space-y-1">
-                  {splits.map((t, i) => (
-                    <div key={i} className="flex justify-between px-3 py-1.5 rounded-lg text-[12px]" style={{ background: 'rgba(118,118,128,0.1)' }}>
-                      <span style={{ color: 'var(--text-tertiary)' }}>S{i + 1}</span>
-                      <span className="font-mono font-medium" style={{ color: 'var(--text-primary)' }}>{formatTimeShort(t)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Last result */}
-              {lastRecord && colorMeta && (
-                <div className="p-3 rounded-2xl flex items-center gap-2.5" style={{ background: `${colorMeta.bg === 'bg-purple-500/20' ? 'rgba(191,90,242,0.12)' : colorMeta.bg === 'bg-green-500/20' ? 'rgba(48,209,88,0.12)' : 'rgba(255,214,10,0.12)'}` }}>
-                  <div className="text-xl">
-                    {lastRecordColor === 'purple' ? '🟣' : lastRecordColor === 'green' ? '🟢' : '🟡'}
-                  </div>
-                  <div>
-                    <div className="text-[12px] font-semibold" style={{ color: `var(--${lastRecordColor === 'purple' ? 'accent-purple' : lastRecordColor === 'green' ? 'green' : 'yellow'})` }}>
-                      {colorMeta.label}
-                    </div>
-                    <div className="tabular-nums text-[18px] font-semibold text-[var(--text-primary)]">
-                      {formatTime(lastRecord.timeMs)}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* ── Records Tab ── */}
@@ -532,6 +660,28 @@ export default function BottomPanel() {
                 <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(191,90,242,0.1)', border: '1px solid rgba(191,90,242,0.2)' }}>
                   <span className="text-[13px] font-semibold" style={{ color: 'var(--accent-purple)' }}>PB</span>
                   <span className="tabular-nums text-[15px] font-semibold ml-auto" style={{ color: 'var(--accent-purple)' }}>{formatTime(pb)}</span>
+                </div>
+              )}
+
+              {/* Session statistics */}
+              {recordCount > 0 && (
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>🏁 圈数</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{recordCount}</div>
+                  </div>
+                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>⏱ 最快</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{pb !== null ? formatTimeShort(pb) : '—'}</div>
+                  </div>
+                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>📊 平均</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>{formatTimeShort(recordAvg)}</div>
+                  </div>
+                  <div style={{ background: 'rgba(118,118,128,0.08)', borderRadius: 12, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>📏 波动</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)' }}>±{(recordStdDev / 1000).toFixed(3)}s</div>
+                  </div>
                 </div>
               )}
 
@@ -554,11 +704,17 @@ export default function BottomPanel() {
                       className="group flex items-center justify-between px-3 py-2 rounded-xl"
                       style={{ background: color ? bgMap[color] : 'rgba(118,118,128,0.08)' }}
                     >
-                      <span className="tabular-nums text-[15px] font-medium" style={{ color: color ? textMap[color] : 'var(--text-primary)' }}>
-                        {formatTimeShort(record.timeMs)}
-                        {record.weather && <span className="ml-1.5 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{record.weather.weatherDesc} {record.weather.temp}°</span>}
-                      </span>
-                      <div className="flex items-center gap-2">
+                      <div className="min-w-0">
+                        <span className="tabular-nums text-[15px] font-medium" style={{ color: color ? textMap[color] : 'var(--text-primary)' }}>
+                          {formatTimeShort(record.timeMs)}
+                        </span>
+                        {record.weather && (
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                            {record.weather.weatherDesc} {record.weather.temp}°C 💨{record.weather.windSpeed}km/h
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[12px] text-[var(--text-tertiary)]">
                           {new Date(record.timestamp).toLocaleString('zh-CN', {
                             month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',

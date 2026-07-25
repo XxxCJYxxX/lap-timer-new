@@ -4,11 +4,13 @@ import 'leaflet/dist/leaflet.css';
 import { useRouteStore } from '../stores/routeStore';
 import { useTimerStore } from '../stores/timerStore';
 import { useLocationStore } from '../stores/locationStore';
+import { useNavStore } from '../stores/navStore';
 import { toDisplayCoords, getTileProvider, setTileProvider } from '../utils/coord';
 import { amapRoadLayer, BASE_LAYERS } from '../utils/tiles';
 import { haversine } from '../utils/distance';
 import { encodePolyline } from '../utils/seedcode';
 import { downloadRoute } from '../utils/routeIO';
+import { fetchRoute } from '../utils/routing';
 import type { Route } from '../types';
 import type { TileProvider } from '../types';
 
@@ -43,7 +45,7 @@ const FINISH_ICON = L.divIcon({
 });
 
 const LOCATION_ICON = L.divIcon({
-  className: 'location-marker',
+  className: 'location-pulse',
   html: `
     <div style="position:relative;width:24px;height:24px;">
       <div class="location-dot-pulse" style="position:absolute;inset:-12px;border-radius:50%;background:rgba(10,132,255,0.2);"></div>
@@ -51,6 +53,19 @@ const LOCATION_ICON = L.divIcon({
     </div>`,
   iconSize: [24, 24],
   iconAnchor: [12, 12],
+});
+
+const DEST_ICON = L.divIcon({
+  className: 'dest-marker',
+  html: `
+    <div style="position:relative;">
+      <svg width="28" height="36" viewBox="0 0 28 36" fill="none">
+        <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z" fill="#FF453A"/>
+        <circle cx="14" cy="14" r="5" fill="#fff" opacity="0.9"/>
+      </svg>
+    </div>`,
+  iconSize: [28, 36],
+  iconAnchor: [14, 36],
 });
 
 interface Props {
@@ -118,9 +133,14 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
   const locationWatchId = useRef<number | null>(null);
   const isFollowingRef = useRef(false);
   const searchMarkerRef = useRef<L.Marker | null>(null);
+  const routePolylineRef = useRef<L.Polyline | null>(null);
+  const destMarkerRef = useRef<L.Marker | null>(null);
+  const routeFetchedRef = useRef<boolean>(false);
   const prevPosRef = useRef<{ lat: number; lng: number; ts: number } | null>(null);
   const lastGpsUpdateRef = useRef<{ lat: number; lng: number }>({ lat: 0, lng: 0 });
   const lastDisplayPosRef = useRef<[number, number]>([39.9042, 116.4074]);
+  const lastPanToRef = useRef<number>(0);
+  const prevFollowModeRef = useRef<boolean>(false);
 
   const { isCreating, createStep, draftWaypoints, activeRouteId, routes, addWaypoint } = useRouteStore();
   const followMode = useTimerStore((s) => s.followMode);
@@ -141,6 +161,8 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
       zoom: 13,
       zoomControl: false,
       attributionControl: false,
+      preferCanvas: true,
+      renderer: L.canvas({ padding: 0.5 }),
       layers: [amapRoadLayer],
     });
 
@@ -233,6 +255,116 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
 
   useEffect(() => { refreshMarkers(); }, [refreshMarkers]);
 
+  // ── Navigation: render route polyline + destination marker ──
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const { route, destination } = useNavStore.getState();
+
+    // Clean up previous route polyline
+    if (routePolylineRef.current) {
+      routePolylineRef.current.remove();
+      routePolylineRef.current = null;
+    }
+    // Clean up previous destination marker
+    if (destMarkerRef.current) {
+      destMarkerRef.current.remove();
+      destMarkerRef.current = null;
+    }
+
+    // Draw destination marker
+    if (destination) {
+      const [dlng, dlat] = toDisplayCoords(destination.lng, destination.lat);
+      destMarkerRef.current = L.marker([dlat, dlng], { icon: DEST_ICON, zIndexOffset: 950 })
+        .addTo(map)
+        .bindPopup(destination.name, { closeButton: false, className: 'search-popup' });
+    }
+
+    // Draw route polyline
+    if (route && route.coordinates.length >= 2) {
+      const displayCoords: L.LatLngExpression[] = route.coordinates.map(([lng, lat]) => {
+        const [dlng, dlat] = toDisplayCoords(lng, lat);
+        return [dlat, dlng];
+      });
+      routePolylineRef.current = L.polyline(displayCoords, {
+        color: '#0A84FF',
+        weight: 5,
+        opacity: 0.8,
+        dashArray: '10 6',
+      }).addTo(map);
+    }
+  }, [useNavStore.getState().route, useNavStore.getState().destination]);
+
+  // Subscribe to navStore changes for route/destination rendering
+  useEffect(() => {
+    const unsub = useNavStore.subscribe((state, prev) => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Route changed
+      if (state.route !== prev.route) {
+        if (routePolylineRef.current) {
+          routePolylineRef.current.remove();
+          routePolylineRef.current = null;
+        }
+        if (state.route && state.route.coordinates.length >= 2) {
+          const displayCoords: L.LatLngExpression[] = state.route.coordinates.map(([lng, lat]) => {
+            const [dlng, dlat] = toDisplayCoords(lng, lat);
+            return [dlat, dlng];
+          });
+          routePolylineRef.current = L.polyline(displayCoords, {
+            color: '#0A84FF',
+            weight: 5,
+            opacity: 0.8,
+            dashArray: '10 6',
+          }).addTo(map);
+        }
+      }
+
+      // Destination changed
+      if (state.destination !== prev.destination) {
+        if (destMarkerRef.current) {
+          destMarkerRef.current.remove();
+          destMarkerRef.current = null;
+        }
+        if (state.destination) {
+          const [dlng, dlat] = toDisplayCoords(state.destination.lng, state.destination.lat);
+          destMarkerRef.current = L.marker([dlat, dlng], { icon: DEST_ICON, zIndexOffset: 950 })
+            .addTo(map)
+            .bindPopup(state.destination.name, { closeButton: false, className: 'search-popup' });
+        }
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Fetch route when GPS becomes available after destination is set
+  useEffect(() => {
+    if (routeFetchedRef.current) return;
+
+    const gpsPos = useLocationStore.getState();
+    const navState = useNavStore.getState();
+
+    if (gpsPos.lat !== null && gpsPos.lng !== null && navState.destination && !navState.route) {
+      routeFetchedRef.current = true;
+      useNavStore.getState().setLoading(true);
+      fetchRoute(gpsPos.lng, gpsPos.lat, navState.destination.lng, navState.destination.lat).then((r) => {
+        useNavStore.getState().setRoute(r);
+        useNavStore.getState().setLoading(false);
+      });
+    }
+
+    // Reset the flag when destination is cleared
+    const unsub = useNavStore.subscribe((state) => {
+      if (!state.destination) {
+        routeFetchedRef.current = false;
+      }
+    });
+    return () => unsub();
+  }, []);
+
   // Map click for route creation — separate effect to capture latest state
   useEffect(() => {
     const map = mapRef.current;
@@ -317,7 +449,24 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
             accuracyCircleRef.current.setRadius(accuracy);
           }
         }
-        if (isFollowingRef.current || followMode) map.setView([lat, lng], map.getZoom(), { animate: false });
+        if (isFollowingRef.current || followMode) {
+          const now = performance.now();
+          if (now - lastPanToRef.current > 200) {
+            map.panTo([lat, lng], { animate: true, duration: 0.3 });
+            lastPanToRef.current = now;
+          }
+          const speed = useTimerStore.getState().currentSpeed ?? 0;
+          let targetZoom: number;
+          if (speed < 10) targetZoom = 19;
+          else if (speed < 30) targetZoom = 18;
+          else if (speed < 60) targetZoom = 17;
+          else if (speed < 100) targetZoom = 16;
+          else targetZoom = 15;
+          const currentZoom = map.getZoom();
+          if (Math.abs(targetZoom - currentZoom) > 0.5) {
+            map.setZoom(targetZoom);
+          }
+        }
         setIsLocating(true);
         setLocationError(null);
 
@@ -325,7 +474,10 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
         useLocationStore.getState().setPosition(latitude, longitude, accuracy);
         updateSpeed(pos);
 
-        // Auto start/stop based on GPS proximity with state machine
+        // Auto-split at intermediate waypoints (always active)
+        useTimerStore.getState().checkAutoSplit(latitude, longitude);
+
+        // Auto start/stop based on GPS proximity with state machine (auto mode only)
         const ts = useTimerStore.getState();
         if (ts.autoMode) {
           const rs = useRouteStore.getState();
@@ -356,8 +508,6 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
               ts.stop();
             }
           }
-          // Auto-split at intermediate waypoints (GPS checkpoint detection)
-          ts.checkAutoSplit(latitude, longitude);
         }
       },
       (err) => {
@@ -372,7 +522,7 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
           setLocationError('定位失败，请检查系统定位服务是否开启');
         }
       },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
     );
   };
 
@@ -413,16 +563,26 @@ export default function MapView({ flyTo, onFlyComplete }: Props) {
 
   useEffect(() => { return () => stopLocationWatch(); }, []);
 
-  // Follow mode: zoom to GPS + follow
+  // Follow mode transitions: dramatic zoom-in on start, zoom-out on stop
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (followMode) {
-      map.flyTo(lastDisplayPosRef.current, 18, { duration: 0.4 });
+
+    const wasFollowing = prevFollowModeRef.current;
+    const isNowFollowing = followMode;
+
+    if (isNowFollowing && !wasFollowing) {
+      // Timer started — dramatic zoom-in to GPS position
+      map.flyTo(lastDisplayPosRef.current, 18, { duration: 1.2 });
       isFollowingRef.current = true;
-    } else {
+      lastPanToRef.current = 0; // reset throttle so first panTo is immediate
+    } else if (!isNowFollowing && wasFollowing) {
+      // Timer stopped — zoom out to show full route
+      map.flyTo(lastDisplayPosRef.current, 15, { duration: 1 });
       isFollowingRef.current = false;
     }
+
+    prevFollowModeRef.current = followMode;
   }, [followMode]);
 
   // ── Search / flyTo ──

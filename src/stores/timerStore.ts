@@ -54,7 +54,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   elapsed: 0,
   lastRecord: null,
   lastRecordColor: null,
-  autoMode: false,
+  autoMode: true,
   autoPhase: 'waiting_start',
   distanceToTarget: null,
   currentSpeed: null,
@@ -85,7 +85,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   tick: () => {
     const { status, startTime } = get();
     if (status !== 'running' || !startTime) return;
-    set({ elapsed: performance.now() - startTime });
+    set({ elapsed: Math.round(performance.now() - startTime) });
   },
 
   captureSplit: () => {

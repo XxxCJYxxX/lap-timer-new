@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { searchPlaces, formatGeocoderLabel, type GeocoderResult } from '../utils/geocoder';
+import { useNavStore } from '../stores/navStore';
+import { useLocationStore } from '../stores/locationStore';
+import { fetchRoute } from '../utils/routing';
 
 interface Props {
   onSelect: (lat: number, lng: number, label: string) => void;
@@ -61,7 +64,26 @@ export default function SearchBar({ onSelect }: Props) {
   }, []);
 
   const selectItem = (result: GeocoderResult) => {
-    onSelect(parseFloat(result.lat), parseFloat(result.lon), formatGeocoderLabel(result));
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    const label = formatGeocoderLabel(result);
+
+    // Keep existing flyTo behavior
+    onSelect(lat, lng, label);
+
+    // Set navigation destination
+    useNavStore.getState().setDestination(label, lat, lng);
+
+    // If GPS position is available, fetch route immediately
+    const gpsPos = useLocationStore.getState();
+    if (gpsPos.lat !== null && gpsPos.lng !== null) {
+      useNavStore.getState().setLoading(true);
+      fetchRoute(gpsPos.lng, gpsPos.lat, lng, lat).then((r) => {
+        useNavStore.getState().setRoute(r);
+        useNavStore.getState().setLoading(false);
+      });
+    }
+
     setQuery('');
     setResults([]);
     setOpen(false);
